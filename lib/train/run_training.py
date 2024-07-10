@@ -14,12 +14,18 @@ import _init_paths
 import lib.train.admin.settings as ws_settings
 
 
+# 确保每次运行的结果一致
 def init_seeds(seed):
+    # 设置随机数种子，保证每次运行的都会得到相同的随机数，确保结果一致
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
+    # 将 CuDNN 后端设置为确定性模式。CuDNN 是一个 NVIDIA 提供的 GPU 加速库，常用于深度学习。
+    # 设置为确定性模式后，CuDNN 将选择确定性算法，从而确保每次运行结果相同。
     torch.backends.cudnn.deterministic = True
+    # 禁用 CuDNN 的自动优化。CuDNN 在默认情况下会自动寻找最佳算法以提高性能，但这会导致运行结果不一致。
+    # 禁用这个功能确保了结果的一致性和可重复性。
     torch.backends.cudnn.benchmark = False
 
 
@@ -35,6 +41,9 @@ def run_training(script_name, config_name, cudnn_benchmark=True, local_rank=-1, 
     if save_dir is None:
         print("save_dir dir is not given. Use the default dir instead.")
     # This is needed to avoid strange crashes related to opencv
+    # 禁用多线程优化
+    # 它会设置 OpenCV 使用的线程数为 0，从而强制 OpenCV 在单线程模式下运行。
+    # 在一些应用程序中，特别是涉及到多线程的复杂应用时，不同库之间的线程管理可能会发生冲突。通过禁用 OpenCV 的多线程优化，可以减少这种冲突的可能性。
     cv.setNumThreads(0)
 
     torch.backends.cudnn.benchmark = cudnn_benchmark
@@ -58,6 +67,7 @@ def run_training(script_name, config_name, cudnn_benchmark=True, local_rank=-1, 
     settings.save_dir = os.path.abspath(save_dir)
     settings.use_lmdb = use_lmdb
     prj_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+    # cfg_file = experiments/ostrack/vitb_256_...
     settings.cfg_file = os.path.join(prj_dir, 'experiments/%s/%s.yaml' % (script_name, config_name))
     settings.use_wandb = use_wandb
     if distill:
@@ -92,7 +102,11 @@ def main():
     parser.add_argument('--script_teacher', type=str, help='teacher script name')
     parser.add_argument('--config_teacher', type=str, help='teacher yaml configure file name')
 
-    args = parser.parse_args()
+    args = parser.parse_args(['--script', 'ostrack', '--config', 'vitb_256_mae_ce_32x4_ep300',
+                              '--save_dir', './output', '--use_lmdb', '0', '--script_prv', 'None'
+                              , '--config_prv', 'baseline'
+                              , '--use_wandb', '0', '--distill', '0', '--script_teacher', 'None'
+                              , '--config_teacher', 'None'])
     if args.local_rank != -1:
         dist.init_process_group(backend='nccl')
         torch.cuda.set_device(args.local_rank)

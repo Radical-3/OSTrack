@@ -36,16 +36,23 @@ class Got10k(BaseVideoDataset):
                         options can be used at the same time.
             data_fraction - Fraction of dataset to be used. The complete dataset is used by default
         """
+        # split：可以是 'train'、'val'、'train_full'、'vottrain' 或 'votval'。这里是vottrain和votval
+        # 每一个存的都是预定义的seq_ids，votaval是vot验证集预定义的seq_ids
+        # seq_ids：视频序列的 ID 列表。明确指定了要使用的数据集中的哪些视频序列(样本)。如果指定了 seq_ids，则忽略 split 参数。就使用自己的seq_ids
+        # image_loader：用于读取图像的函数，默认使用 jpeg4py_loader。
+        # data_fraction：使用的数据集比例，默认为使用整个数据集。
         root = env_settings().got10k_dir if root is None else root
         super().__init__('GOT10k', root, image_loader)
 
         # all folders inside the root
+        # self.sequence_list：text中存的样本名称
         self.sequence_list = self._get_sequence_list()
 
         # seq_id is the index of the folder inside the got10k root path
         if split is not None:
             if seq_ids is not None:
                 raise ValueError('Cannot set both split_name and seq_ids.')
+            # ltr_path：'/home/he/project_code/OSTrack/lib/train/dataset/..'
             ltr_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')
             if split == 'train':
                 file_path = os.path.join(ltr_path, 'data_specs', 'got10k_train_split.txt')
@@ -63,15 +70,19 @@ class Got10k(BaseVideoDataset):
             seq_ids = pandas.read_csv(file_path, header=None, dtype=np.int64).squeeze("columns").values.tolist()
         elif seq_ids is None:
             seq_ids = list(range(0, len(self.sequence_list)))
-
+        # seq_ids作用是从样本中筛选选中的样本返回self.sequence_list，不是筛选样本里面的帧
         self.sequence_list = [self.sequence_list[i] for i in seq_ids]
 
+        #data_fraction是从筛选到的样本中取多少比例作为最终的数据集样本
         if data_fraction is not None:
             self.sequence_list = random.sample(self.sequence_list, int(len(self.sequence_list)*data_fraction))
-
+        # 读取样本数据生成一个字典，键是样本的名称，值是样本文件夹中的meta_info.ini文件中的数据组成的字典
         self.sequence_meta_info = self._load_meta_info()
+        # 将每一个样本按照所属于的object_class(样本类别)分类，返回一个字典
+        # 键为object_class，值为列表，列表中存的是属于这个类别的样本在sequence_list中的下标
         self.seq_per_class = self._build_seq_per_class()
 
+        # self.class_list为样本的类别的列表
         self.class_list = list(self.seq_per_class.keys())
         self.class_list.sort()
 
@@ -84,10 +95,13 @@ class Got10k(BaseVideoDataset):
     def has_occlusion_info(self):
         return True
 
+    # 读取样本数据生成一个字典，键是样本的名称，值是样本里面的具体数据
     def _load_meta_info(self):
         sequence_meta_info = {s: self._read_meta(os.path.join(self.root, s)) for s in self.sequence_list}
         return sequence_meta_info
 
+    # 读取样本文件中的meta_info.ini文件，然后读取里面的有用信息，返回一个字典
+    # [：-1] 是因为要去掉最后的换行符
     def _read_meta(self, seq_path):
         try:
             with open(os.path.join(seq_path, 'meta_info.ini')) as f:
@@ -105,6 +119,8 @@ class Got10k(BaseVideoDataset):
                                        'motion_adverb': None})
         return object_meta
 
+    # 将每一个样本按照所属于的object_class(样本类别)分类，返回一个字典
+    # 键为object_class，值为列表，列表中存的是属于这个类别的样本在sequence_list中的下标
     def _build_seq_per_class(self):
         seq_per_class = {}
 

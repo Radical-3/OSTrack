@@ -5,6 +5,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 
+# 这段代码实现了Focal Loss的计算，通过对正负样本的损失进行不同的缩放，解决了类别不平衡的问题。
+# Focal Loss通过引入alpha和beta参数，使得模型更关注难分类的样本，从而提高了模型在不平衡数据集上的表现。
 class FocalLoss(nn.Module, ABC):
     def __init__(self, alpha=2, beta=4):
         super(FocalLoss, self).__init__()

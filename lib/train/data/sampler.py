@@ -35,8 +35,10 @@ class TrackingSampler(torch.utils.data.Dataset):
             frame_sample_mode - Either 'causal' or 'interval'. If 'causal', then the test frames are sampled in a causally,
                                 otherwise randomly within the interval.
         """
+        # 得到生成的datasets，初始化一些其他的参数
         self.datasets = datasets
         self.train_cls = train_cls  # whether we are training classification
+        # 控制采样得到的样本中正样本占比为pos_prob
         self.pos_prob = pos_prob  # probability of sampling positive class when making classification
 
         # If p not provided, sample uniformly from all videos
@@ -45,6 +47,7 @@ class TrackingSampler(torch.utils.data.Dataset):
 
         # Normalize
         p_total = sum(p_datasets)
+        # self.p_datasets中的值是对p_datasets的值做归一化处理，使其总和为1 [1,1,1,1] -- > [0.25,0.25,0.25,0.25]
         self.p_datasets = [x / p_total for x in p_datasets]
 
         self.samples_per_epoch = samples_per_epoch
@@ -105,8 +108,8 @@ class TrackingSampler(torch.utils.data.Dataset):
         valid = False
         while not valid:
             # Select a dataset
-            dataset = random.choices(self.datasets, self.p_datasets)[0]
-
+            # dataset = random.choices(self.datasets, self.p_datasets)[0]
+            dataset = self.datasets[0]
             is_video_dataset = dataset.is_video_sequence()
 
             # sample a sequence from the given dataset

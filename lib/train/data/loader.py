@@ -2,7 +2,8 @@ import torch
 import torch.utils.data.dataloader
 import importlib
 import collections
-from torch._six import string_classes
+# from torch import string_classes
+string_classes = str
 from lib.utils import TensorDict, TensorList
 
 if float(torch.__version__[:3]) >= 1.9 or len('.'.join((torch.__version__).split('.')[0:2])) > 3:
@@ -81,9 +82,18 @@ def ltr_collate_stack1(batch):
         if _check_use_shared_memory():
             # If we're in a background process, concatenate directly into a
             # shared memory tensor to avoid an extra copy
+            # 得到batch中所有元素的数量，比如batch是(2,3)则numel为6
             numel = sum([x.numel() for x in batch])
+            # 创建一个新的大小为numel的共享内存存储对象，初始为0，类型和设备和batch[0]相同
             storage = batch[0].storage()._new_shared(numel)
-            out = batch[0].new(storage)
+            # storage = batch[0].untyped_storage()._new_shared(numel)
+            # 通过这个对象创建一个和batch[0]相同类型和大小的张量out  里面的数据和storage一样，
+            # out = batch[0].new(storage)
+            out = batch[0].new(storage).view(-1, *list(batch[0].size()))
+            # 交换前两个维度 加上这句话或者将下面的stack的dim变为0，pytorch3d中的issue中的是0，这个的原始为1
+            # 这里应该就是1，因为改为0后会崩溃
+            out = out.transpose(0, 1)
+        # 将batch按照第一维度堆叠，然后存储在out中
         return torch.stack(batch, 1, out=out)
         # if batch[0].dim() < 4:
         #     return torch.stack(batch, 0, out=out)

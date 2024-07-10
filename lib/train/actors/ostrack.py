@@ -7,6 +7,8 @@ from ...utils.heapmap_utils import generate_heatmap
 from ...utils.ce_utils import generate_mask_cond, adjust_keep_rate
 
 
+# 这段代码实现了OSTrack模型的训练逻辑，通过前向传播计算得到预测结果，并通过各种损失函数计算损失，进而进行模型的优化。
+# 损失函数包括GIoU损失、L1损失和位置损失，通过加权和计算最终损失，从而指导模型的训练。
 class OSTrackActor(BaseActor):
     """ Actor for training OSTrack models """
 

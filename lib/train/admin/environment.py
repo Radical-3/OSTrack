@@ -93,6 +93,7 @@ def create_default_local_file_ITP_train(workspace_dir, data_dir):
 def env_settings():
     env_module_name = 'lib.train.admin.local'
     try:
+        # importlib.import_module 动态导入模块
         env_module = importlib.import_module(env_module_name)
         return env_module.EnvironmentSettings()
     except:
