@@ -31,13 +31,13 @@ class Attention(nn.Module):
             trunc_normal_(self.relative_position_bias_table, std=0.02)
 
     def forward(self, x, mask=None, return_attention=False):
-        # x: B, N, C
+        # x: B, N, C   bs，总块数，每一块的特征维度
         # mask: [B, N, ] torch.bool
-        B, N, C = x.shape
+        B, N, C = x.shape  # 下面是生成QKV矩阵，形状都是(bs,多头注意力机制的qkv的数量，总块数，投影到的维度)(B,M,N,D) M*D=C
         qkv = self.qkv(x).reshape(B, N, 3, self.num_heads, C // self.num_heads).permute(2, 0, 3, 1, 4)
         q, k, v = qkv.unbind(0)   # make torchscript happy (cannot use tensor as tuple)
 
-        attn = (q @ k.transpose(-2, -1)) * self.scale
+        attn = (q @ k.transpose(-2, -1)) * self.scale  # attn是Q*K^-1/C^-2形状为(B,M,N,N),因为k.transpose(-2, -1)变成了(B,M,D,N)所以乘完之后是(B,M,N,N)
 
         if self.rpe:
             relative_position_bias = self.relative_position_bias_table[:, self.relative_position_index].unsqueeze(0)
@@ -49,8 +49,8 @@ class Attention(nn.Module):
         attn = attn.softmax(dim=-1)
         attn = self.attn_drop(attn)
 
-        x = (attn @ v).transpose(1, 2).reshape(B, N, C)
-        x = self.proj(x)
+        x = (attn @ v).transpose(1, 2).reshape(B, N, C)  # 这里(attn @ v)是(B,M,N,C)然后交换M和N，然后，然后通过reshape将所有的注意力头整合到一起变为(B,N,C)
+        x = self.proj(x)  # 通过线性变换矩阵W^O，将最后的特征进行整合
         x = self.proj_drop(x)
 
         if return_attention:

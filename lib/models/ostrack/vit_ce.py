@@ -105,8 +105,8 @@ class VisionTransformerCE(VisionTransformer):
                          ):
         B, H, W = x.shape[0], x.shape[2], x.shape[3]
 
-        x = self.patch_embed(x)
-        z = self.patch_embed(z)
+        x = self.patch_embed(x)  # (32,3,256,256)->(32,256,768) 展平后的特征(bs,n,特征维度)
+        z = self.patch_embed(z)  # (32,3,128,128)->(32,64,768)
 
         # attention mask handling
         # B, H, W
@@ -124,27 +124,27 @@ class VisionTransformerCE(VisionTransformer):
             cls_tokens = self.cls_token.expand(B, -1, -1)
             cls_tokens = cls_tokens + self.cls_pos_embed
 
-        z += self.pos_embed_z
+        z += self.pos_embed_z  # 两个位置编码
         x += self.pos_embed_x
 
         if self.add_sep_seg:
             x += self.search_segment_pos_embed
             z += self.template_segment_pos_embed
 
-        x = combine_tokens(z, x, mode=self.cat_mode)
+        x = combine_tokens(z, x, mode=self.cat_mode)  # 将z和x堆叠在一起，便于后面一起放到transformer中进行特征提取 (32,64+256,768)
         if self.add_cls_token:
             x = torch.cat([cls_tokens, x], dim=1)
 
         x = self.pos_drop(x)
 
-        lens_z = self.pos_embed_z.shape[1]
-        lens_x = self.pos_embed_x.shape[1]
+        lens_z = self.pos_embed_z.shape[1]   # 64
+        lens_x = self.pos_embed_x.shape[1]   # 256
 
-        global_index_t = torch.linspace(0, lens_z - 1, lens_z).to(x.device)
-        global_index_t = global_index_t.repeat(B, 1)
+        global_index_t = torch.linspace(0, lens_z - 1, lens_z).to(x.device)  # 生成一个一维的tensor(64),存放0-63个数
+        global_index_t = global_index_t.repeat(B, 1)  # 复制成(32,64)的tensor，每一行都是相同的0-63 32是batch_size
 
-        global_index_s = torch.linspace(0, lens_x - 1, lens_x).to(x.device)
-        global_index_s = global_index_s.repeat(B, 1)
+        global_index_s = torch.linspace(0, lens_x - 1, lens_x).to(x.device)  # (256)  0-255
+        global_index_s = global_index_s.repeat(B, 1)  # (32,256)
         removed_indexes_s = []
         for i, blk in enumerate(self.blocks):
             x, global_index_t, global_index_s, removed_index_s, attn = \

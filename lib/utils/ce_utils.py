@@ -21,7 +21,7 @@ def generate_mask_cond(cfg, bs, device, gt_bbox):
         box_mask_z = None
     elif cfg.MODEL.BACKBONE.CE_TEMPLATE_RANGE == 'CTR_POINT':
         if template_feat_size == 8:
-            index = slice(3, 4)
+            index = slice(3, 4)  # 就是获取[3,4)也就是3
         elif template_feat_size == 12:
             index = slice(5, 6)
         elif template_feat_size == 7:
@@ -31,7 +31,7 @@ def generate_mask_cond(cfg, bs, device, gt_bbox):
         else:
             raise NotImplementedError
         box_mask_z = torch.zeros([bs, template_feat_size, template_feat_size], device=device)
-        box_mask_z[:, index, index] = 1
+        box_mask_z[:, index, index] = 1  # 创建一个除了中心点(index,index)是1其他位置都是0的tensor
         box_mask_z = box_mask_z.flatten(1).to(torch.bool)
     elif cfg.MODEL.BACKBONE.CE_TEMPLATE_RANGE == 'CTR_REC':
         # use fixed 4x4 region, 3:5 for 8x8
@@ -46,7 +46,7 @@ def generate_mask_cond(cfg, bs, device, gt_bbox):
             raise NotImplementedError
         box_mask_z = torch.zeros([bs, template_feat_size, template_feat_size], device=device)
         box_mask_z[:, index, index] = 1
-        box_mask_z = box_mask_z.flatten(1).to(torch.bool)
+        box_mask_z = box_mask_z.flatten(1).to(torch.bool)  # 展平为(bs,8*8)的tensor
 
     elif cfg.MODEL.BACKBONE.CE_TEMPLATE_RANGE == 'GT_BOX':
         box_mask_z = torch.zeros([bs, template_size, template_size], device=device)

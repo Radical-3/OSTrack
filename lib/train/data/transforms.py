@@ -46,6 +46,7 @@ class Transform:
             if v not in self._valid_all:
                 raise ValueError('Incorrect input \"{}\" to transform. Only supports inputs {} and arguments {}.'.format(v, self._valid_inputs, self._valid_args))
 
+        # 从inputs字典中获取joint的值，如果没有则默认为True，下面同理 两个都是True
         joint_mode = inputs.get('joint', True)
         new_roll = inputs.get('new_roll', True)
 
@@ -53,13 +54,15 @@ class Transform:
             out = zip(*[self(**inp) for inp in self._split_inputs(inputs)])
             return tuple(list(o) for o in out)
 
+        # 将inputs的值赋值给out，out也是一个字典，里面存的数据和inputs一样
         out = {k: v for k, v in inputs.items() if k in self._valid_inputs}
 
+        # 这里的t分别対mask, image, bbox做对应的transform，第一个transform是转为灰度图 第二个是裁减
         for t in self.transforms:
             out = t(**out, joint=joint_mode, new_roll=new_roll)
         if len(var_names) == 1:
             return out[var_names[0]]
-        # Make sure order is correct
+        # Make sure order is correct 返回经过transform后的image, bbox ,mask的值组成的元组
         return tuple(out[v] for v in var_names)
 
     def _split_inputs(self, inputs):
@@ -94,6 +97,8 @@ class TransformBase:
 
     def __call__(self, **inputs):
         # Split input
+        # input_vars存储了image, bbox, mask三个键值対
+        # input_args存储了new_roll的键值対
         input_vars = {k: v for k, v in inputs.items() if k in self._valid_inputs}
         input_args = {k: v for k, v in inputs.items() if k in self._valid_args}
 
@@ -109,11 +114,11 @@ class TransformBase:
         outputs = dict()
         for var_name, var in input_vars.items():
             if var is not None:
-                transform_func = getattr(self, 'transform_' + var_name)
+                transform_func = getattr(self, 'transform_' + var_name)  # 将transform_var_name这个变换给transform_func
                 if var_name in ['coords', 'bbox']:
-                    params = (self._get_image_size(input_vars),) + self._rand_params
+                    params = (self._get_image_size(input_vars),) + self._rand_params  # params((宽，高),False)
                 else:
-                    params = self._rand_params
+                    params = self._rand_params  # params:(False,) 元组
                 if isinstance(var, (list, tuple)):
                     outputs[var_name] = [transform_func(x, *params) for x in var]
                 else:

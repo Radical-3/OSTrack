@@ -31,9 +31,10 @@ class LTRTrainer(BaseTrainer):
         self._set_default_settings()
 
         # Initialize statistics variables
+        # {'train':None, 'val':None}
         self.stats = OrderedDict({loader.name: None for loader in self.loaders})
 
-        # Initialize tensorboard and wandb
+        # Initialize tensorboard and wandb 好像是两个日志记录工具
         self.wandb_writer = None
         if settings.local_rank in [-1, 0]:
             tensorboard_writer_dir = os.path.join(self.settings.env.tensorboard_dir, self.settings.project_path)
@@ -65,12 +66,15 @@ class LTRTrainer(BaseTrainer):
 
     def cycle_dataset(self, loader):
         """Do a cycle of training or validation."""
-
+        # 根据 loader.training 确定是训练模式还是验证模式。train(True) 启用训练模式，train(False) 启用验证模式。
         self.actor.train(loader.training)
+        # 根据 loader.training 设置是否启用梯度计算。在训练模式下启用，在验证模式下禁用。
         torch.set_grad_enabled(loader.training)
 
+        # 初始化计时器，用于统计各个阶段的时间。
         self._init_timing()
 
+        # 这个1要要采样的搜索帧的数量，每次只采样一个帧？
         for i, data in enumerate(loader, 1):
             self.data_read_done_time = time.time()
             # get inputs
@@ -126,8 +130,10 @@ class LTRTrainer(BaseTrainer):
     def train_epoch(self):
         """Do one epoch for each loader."""
         for loader in self.loaders:
+            # loader.epoch_interval表示每几个epoch参与一次训练train的是1，val的是20
             if self.epoch % loader.epoch_interval == 0:
                 # 2021.1.10 Set epoch
+                # isinstance(loader.sampler, DistributedSampler)：false
                 if isinstance(loader.sampler, DistributedSampler):
                     loader.sampler.set_epoch(self.epoch)
                 self.cycle_dataset(loader)

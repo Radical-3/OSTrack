@@ -9,7 +9,7 @@ Replace cv.BORDER_REPLICATE with cv.BORDER_CONSTANT
 Add a variable called att_mask for computing attention and positional encoding later'''
 
 
-def sample_target(im, target_bb, search_area_factor, output_sz=None, mask=None):
+def     sample_target(im, target_bb, search_area_factor, output_sz=None, mask=None):
     """ Extracts a square crop centered at target_bb box, of area search_area_factor^2 times target_bb area
 
     args:

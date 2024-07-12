@@ -191,6 +191,8 @@ class LTRLoader(torch.utils.data.dataloader.DataLoader):
             if stack_dim == 0:
                 collate_fn = ltr_collate
             elif stack_dim == 1:
+                # 这里没看懂，这个ltr_collate_stack1是哪来的
+                # 这个是直接将ltr_collate_stack1这个函数传递给了collate_fn
                 collate_fn = ltr_collate_stack1
             else:
                 raise ValueError('Stack dim no supported. Must be 0 or 1.')

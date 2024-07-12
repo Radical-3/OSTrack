@@ -82,7 +82,7 @@ class CEBlock(nn.Module):
         self.norm1 = norm_layer(dim)
         self.attn = Attention(dim, num_heads=num_heads, qkv_bias=qkv_bias, attn_drop=attn_drop, proj_drop=drop)
         # NOTE: drop path for stochastic depth, we shall see if this is better than dropout here
-        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()
+        self.drop_path = DropPath(drop_path) if drop_path > 0. else nn.Identity()  # nn.Identity()空网络层，占位作用
         self.norm2 = norm_layer(dim)
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
@@ -90,8 +90,8 @@ class CEBlock(nn.Module):
         self.keep_ratio_search = keep_ratio_search
 
     def forward(self, x, global_index_template, global_index_search, mask=None, ce_template_mask=None, keep_ratio_search=None):
-        x_attn, attn = self.attn(self.norm1(x), mask, True)
-        x = x + self.drop_path(x_attn)
+        x_attn, attn = self.attn(self.norm1(x), mask, True)  # 这里的mask是None，x是模板和搜索的所有块的特征 返回通过transformer的每一个块的特征x_attn和关系矩阵(Q*K^-1/C^-2) attn
+        x = x + self.drop_path(x_attn)  # 注意力的输出和x相加
         lens_t = global_index_template.shape[1]
 
         removed_index_search = None

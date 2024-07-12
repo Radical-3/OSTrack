@@ -64,7 +64,7 @@ class OSTrackActor(BaseActor):
                                                 total_epochs=ce_start_epoch + ce_warm_epoch,
                                                 ITERS_PER_EPOCH=1,
                                                 base_keep_rate=self.cfg.MODEL.BACKBONE.CE_KEEP_RATIO[0])
-
+            # adjust_keep_rate 函数通过余弦函数动态调整训练过程中的保持率，使其在预热阶段后平滑过渡到基础保持率。
         if len(template_list) == 1:
             template_list = template_list[0]
 

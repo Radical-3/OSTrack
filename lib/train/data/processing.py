@@ -93,6 +93,7 @@ class STARKProcessing(BaseProcessing):
         """
         # Apply joint transforms
         if self.transform['joint'] is not None:
+            # 这里就是対模板图片和搜索图片的image, bbox, mask做灰度图变换(好像直接就是元数据输出)和裁减变换
             data['template_images'], data['template_anno'], data['template_masks'] = self.transform['joint'](
                 image=data['template_images'], bbox=data['template_anno'], mask=data['template_masks'])
             data['search_images'], data['search_anno'], data['search_masks'] = self.transform['joint'](
@@ -103,11 +104,13 @@ class STARKProcessing(BaseProcessing):
                 "In pair mode, num train/test frames must be 1"
 
             # Add a uniform noise to the center pos
+            # 対bbox进行抖动，模拟抖动情况修改bbox的值
             jittered_anno = [self._get_jittered_box(a, s) for a in data[s + '_anno']]
 
-            # 2021.1.9 Check whether data is valid. Avoid too small bounding boxes
+            # 2021.1.9 Check whether data is valid. Avoid too small bounding boxes 取出bbox的宽和高
             w, h = torch.stack(jittered_anno, dim=0)[:, 2], torch.stack(jittered_anno, dim=0)[:, 3]
-
+            # 根据目标的宽度和高度计算裁剪区域的大小。
+            # 它首先计算目标的面积，然后取其平方根以获得特征尺寸，接着乘以搜索区域因子，最后使用 torch.ceil 取整，以确保裁剪区域的大小是整数。
             crop_sz = torch.ceil(torch.sqrt(w * h) * self.search_area_factor[s])
             if (crop_sz < 1).any():
                 data['valid'] = False
@@ -115,6 +118,8 @@ class STARKProcessing(BaseProcessing):
                 return data
 
             # Crop image region centered at jittered_anno box and get the attention mask
+            # 裁剪以 jittered_anno 框为中心的图像区域并获取注意力掩码 裁减后的图像，裁减后的bbox，裁减后的注意力掩码(注意力机制为了并行防止信息泄漏的那个掩码)，原始图像的裁减后的掩码
+            # 这里的att_mask是 裁减后的图像如果小于规定面积则会填充，填充的像素的位置上的att_mask为1，非填充的为0
             crops, boxes, att_mask, mask_crops = prutils.jittered_center_crop(data[s + '_images'], jittered_anno,
                                                                               data[s + '_anno'], self.search_area_factor[s],
                                                                               self.output_sz[s], masks=data[s + '_masks'])
@@ -123,6 +128,7 @@ class STARKProcessing(BaseProcessing):
                 image=crops, bbox=boxes, att=att_mask, mask=mask_crops, joint=False)
 
             # 2021.1.9 Check whether elements in data[s + '_att'] is all 1
+            # 注意力掩码全是1就无效，全是1意味着全部均匀注意，没用 这个att到底是干啥用的？？
             # Note that type of data[s + '_att'] is tuple, type of ele is torch.tensor
             for ele in data[s + '_att']:
                 if (ele == 1).all():
@@ -130,6 +136,7 @@ class STARKProcessing(BaseProcessing):
                     # print("Values of original attention mask are all one. Replace it with new data.")
                     return data
             # 2021.1.10 more strict conditions: require the donwsampled masks not to be all 1
+            # 确保下采样后的注意力掩码不全为1，下采样就是得到分辨率更低(128*128 - > 8*8)的图片
             for ele in data[s + '_att']:
                 feat_size = self.output_sz[s] // 16  # 16 is the backbone stride
                 # (1,1,128,128) (1,1,256,256) --> (1,1,8,8) (1,1,16,16)

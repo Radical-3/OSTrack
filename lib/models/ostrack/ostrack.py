@@ -92,6 +92,9 @@ class OSTrack(nn.Module):
             raise NotImplementedError
 
 
+# 加载预训练模型放进骨干模型，和头
+# 预训练模型: pretrained_models/mae_pretrain_vit_base.pth
+# 骨干模型: vit_base_patch16_224_ce
 def build_ostrack(cfg, training=True):
     current_dir = os.path.dirname(os.path.abspath(__file__))  # This is your Project Root
     pretrained_path = os.path.join(current_dir, '../../../pretrained_models')
@@ -126,7 +129,10 @@ def build_ostrack(cfg, training=True):
         raise NotImplementedError
 
     backbone.finetune_track(cfg=cfg, patch_start_index=patch_start_index)
-
+    # box_head可以预测三个值
+    # 中心点得分：该位置是中心点的可能性
+    # 该位置相对于实际中心点的x和y的偏移量
+    # 预测目标的尺寸，宽和高
     box_head = build_box_head(cfg, hidden_dim)
 
     model = OSTrack(

@@ -6,11 +6,11 @@ import torch.nn.functional as F
 
 def combine_tokens(template_tokens, search_tokens, mode='direct', return_res=False):
     # [B, HW, C]
-    len_t = template_tokens.shape[1]
-    len_s = search_tokens.shape[1]
+    len_t = template_tokens.shape[1]  # 模板的块数
+    len_s = search_tokens.shape[1]  # 搜索区域的块数
 
-    if mode == 'direct':
-        merged_feature = torch.cat((template_tokens, search_tokens), dim=1)
+    if mode == 'direct':  # mode = direct
+        merged_feature = torch.cat((template_tokens, search_tokens), dim=1) # 直接将两个特征堆叠变成(32,64+256,768)
     elif mode == 'template_central':
         central_pivot = len_s // 2
         first_half = search_tokens[:, :central_pivot, :]

@@ -144,21 +144,29 @@ class Got10k(BaseVideoDataset):
 
     def _read_bb_anno(self, seq_path):
         bb_anno_file = os.path.join(seq_path, "groundtruth.txt")
+        # 读取对应文件夹下的groundtruth.txt文件，将里面的内容存储到gt(ndarray)中
         gt = pandas.read_csv(bb_anno_file, delimiter=',', header=None, dtype=np.float32, na_filter=False, low_memory=False).values
         return torch.tensor(gt)
 
+    # 从absence.label文件中获取全遮挡信息(0,1):0 -- 未遮挡；1 -- 遮挡
+    # 从cover.label中获取覆盖信息(0-8)：0 -- 全覆盖；8 -- 没覆盖
     def _read_target_visible(self, seq_path):
         # Read full occlusion and out_of_view
         occlusion_file = os.path.join(seq_path, "absence.label")
         cover_file = os.path.join(seq_path, "cover.label")
 
+        # ByteTensor：8位无符号整数 00000000 - 11111111
+        # occlusion(ByteTensor)中存的是0，1的遮挡信息
+        # cover(ByteTensor)存的是0-8的覆盖信息
         with open(occlusion_file, 'r', newline='') as f:
             occlusion = torch.ByteTensor([int(v[0]) for v in csv.reader(f)])
         with open(cover_file, 'r', newline='') as f:
             cover = torch.ByteTensor([int(v[0]) for v in csv.reader(f)])
 
+        # 计算目标在每一帧中的可见性，未遮挡且没有被全覆盖则为1，则可见
         target_visible = ~occlusion & (cover>0).byte()
 
+        # 计算目标在每一帧中的可见比例0 -- 1  1表示完全可见
         visible_ratio = cover.float() / 8
         return target_visible, visible_ratio
 
@@ -167,10 +175,13 @@ class Got10k(BaseVideoDataset):
 
     def get_sequence_info(self, seq_id):
         seq_path = self._get_sequence_path(seq_id)
+        # bbox存储的是对应文件夹下的groundtruth.txt中的内容，是一个tensor(n,4)   4:x, y, w, h
         bbox = self._read_bb_anno(seq_path)
 
+        # 检查bbox的宽和高是否大于0，大于0则有效
         valid = (bbox[:, 2] > 0) & (bbox[:, 3] > 0)
         visible, visible_ratio = self._read_target_visible(seq_path)
+        # 最终更新可见性，如果可见并且bbox有效则可见
         visible = visible & valid.byte()
 
         return {'bbox': bbox, 'valid': valid, 'visible': visible, 'visible_ratio': visible_ratio}
@@ -190,13 +201,18 @@ class Got10k(BaseVideoDataset):
         seq_path = self._get_sequence_path(seq_id)
         obj_meta = self.sequence_meta_info[self.sequence_list[seq_id]]
 
+        # frame_list这里已经就将你seq_id(哪个样本(文件夹))中的frame_ids(帧(图片))取出了 list[0].shape = (720,1280,3) (H,W,3)
         frame_list = [self._get_frame(seq_path, f_id) for f_id in frame_ids]
 
         if anno is None:
             anno = self.get_sequence_info(seq_id)
 
+        # anno_frames存放的是所选帧的seq_info_dict信息(bbox,valid,visible,visible_ratio)
         anno_frames = {}
         for key, value in anno.items():
             anno_frames[key] = [value[f_id, ...].clone() for f_id in frame_ids]
 
+        # frame_list：所选帧的图片
+        # anno_frames：所选帧的seq_info_dict信息(bbox,valid,visible,visible_ratio)
+        # obj_meta：所选帧属于的样本的meta_info信息(文件夹里面的meta_info.ini的信息)
         return frame_list, anno_frames, obj_meta

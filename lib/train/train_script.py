@@ -56,6 +56,7 @@ def run(settings):
     if "RepVGG" in cfg.MODEL.BACKBONE.TYPE or "swin" in cfg.MODEL.BACKBONE.TYPE or "LightTrack" in cfg.MODEL.BACKBONE.TYPE:
         cfg.ckpt_dir = settings.save_dir
 
+    # 3.创建网络
     # Create network
     if settings.script_name == "ostrack":
         net = build_ostrack(cfg)
@@ -73,11 +74,14 @@ def run(settings):
     settings.deep_sup = getattr(cfg.TRAIN, "DEEP_SUPERVISION", False)
     settings.distill = getattr(cfg.TRAIN, "DISTILL", False)
     settings.distill_loss_type = getattr(cfg.TRAIN, "DISTILL_LOSS_TYPE", "KL")
+
     # Loss functions and Actors
     if settings.script_name == "ostrack":
+        # 4.定义loss
         focal_loss = FocalLoss()
         objective = {'giou': giou_loss, 'l1': l1_loss, 'focal': focal_loss, 'cls': BCEWithLogitsLoss()}
         loss_weight = {'giou': cfg.TRAIN.GIOU_WEIGHT, 'l1': cfg.TRAIN.L1_WEIGHT, 'focal': 1., 'cls': 1.0}
+        # 5.定义对象，包含网络，损失函数，损失函数权重，设置，cfg
         actor = OSTrackActor(net=net, objective=objective, loss_weight=loss_weight, settings=settings, cfg=cfg)
     else:
         raise ValueError("illegal script name")

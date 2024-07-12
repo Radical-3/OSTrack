@@ -237,6 +237,7 @@ def build_box_head(cfg, hidden_dim):
         else:
             raise ValueError()
         return corner_head
+    # 实用的是CENTER
     elif cfg.MODEL.HEAD.TYPE == "CENTER":
         in_channel = hidden_dim
         out_channel = cfg.MODEL.HEAD.NUM_CHANNELS

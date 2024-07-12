@@ -157,7 +157,8 @@ def build_dataloaders(cfg, settings):
     # train_sampler： None     shuffle：True
     train_sampler = DistributedSampler(dataset_train) if settings.local_rank != -1 else None
     shuffle = False if settings.local_rank != -1 else True
-
+    # 这个loader_train和上面的dataset_train有什么区别，如果要在加一点其他的变量，那直接在上面的dataset_train里面加不就得了
+    # 奥 好像是这里面定义了一个可以按照任意维度进行堆叠数据以形成批次，这里的维度是1
     loader_train = LTRLoader('train', dataset_train, training=True, batch_size=cfg.TRAIN.BATCH_SIZE, shuffle=shuffle,
                              num_workers=cfg.TRAIN.NUM_WORKER, drop_last=True, stack_dim=1, sampler=train_sampler)
 
