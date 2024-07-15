@@ -146,36 +146,36 @@ class VisionTransformerCE(VisionTransformer):
         global_index_s = torch.linspace(0, lens_x - 1, lens_x).to(x.device)  # (256)  0-255
         global_index_s = global_index_s.repeat(B, 1)  # (32,256)
         removed_indexes_s = []
-        for i, blk in enumerate(self.blocks):
+        for i, blk in enumerate(self.blocks):  # self.blocks：12个transformer块
             x, global_index_t, global_index_s, removed_index_s, attn = \
                 blk(x, global_index_t, global_index_s, mask_x, ce_template_mask, ce_keep_rate)
 
-            if self.ce_loc is not None and i in self.ce_loc:
-                removed_indexes_s.append(removed_index_s)
+            if self.ce_loc is not None and i in self.ce_loc:  # self.ce_loc是用来规定要记录哪一次的transformer中通过候选消融删除的搜索区域的块的索引
+                removed_indexes_s.append(removed_index_s)  # 如果self.ce_loc是[3,6,9]，则removed_indexes_s记录了3，6，9块中删除掉的搜索区域的块的索引
 
         x = self.norm(x)
-        lens_x_new = global_index_s.shape[1]
-        lens_z_new = global_index_t.shape[1]
+        lens_x_new = global_index_s.shape[1]  # 剩下的搜索区域的块数
+        lens_z_new = global_index_t.shape[1]  # 这个应该和一开始的模板区域的块数一样没变
 
-        z = x[:, :lens_z_new]
+        z = x[:, :lens_z_new]  # 将模板区域和搜索区域的特征分开
         x = x[:, lens_z_new:]
 
-        if removed_indexes_s and removed_indexes_s[0] is not None:
+        if removed_indexes_s and removed_indexes_s[0] is not None:  # 感觉有点问题，上面的removed_indexes_s只是存放了指定轮次中删除的index，而你在transformer中是每一轮都删除了index，这里面存的不全，而且如果要恢复光有保留的序列也可以啊
             removed_indexes_cat = torch.cat(removed_indexes_s, dim=1)
 
-            pruned_lens_x = lens_x - lens_x_new
-            pad_x = torch.zeros([B, pruned_lens_x, x.shape[2]], device=x.device)
-            x = torch.cat([x, pad_x], dim=1)
-            index_all = torch.cat([global_index_s, removed_indexes_cat], dim=1)
+            pruned_lens_x = lens_x - lens_x_new  # 删除的块的长度
+            pad_x = torch.zeros([B, pruned_lens_x, x.shape[2]], device=x.device)  # 创建要填充的张量
+            x = torch.cat([x, pad_x], dim=1)  # 将保留的张量和填充的张量拼接
+            index_all = torch.cat([global_index_s, removed_indexes_cat], dim=1)  # 将index拼接
             # recover original token order
             C = x.shape[-1]
-            # x = x.gather(1, index_all.unsqueeze(-1).expand(B, -1, C).argsort(1))
+            # x = x.gather(1, index_all.unsqueeze(-1).expand(B, -1, C).argsort(1)) 按照index的顺序将src的张量放到torch.zeros_like(x)中然后赋值给x
             x = torch.zeros_like(x).scatter_(dim=1, index=index_all.unsqueeze(-1).expand(B, -1, C).to(torch.int64), src=x)
 
-        x = recover_tokens(x, lens_z_new, lens_x, mode=self.cat_mode)
+        x = recover_tokens(x, lens_z_new, lens_x, mode=self.cat_mode)  # 这里直接返回
 
         # re-concatenate with the template, which may be further used by other modules
-        x = torch.cat([z, x], dim=1)
+        x = torch.cat([z, x], dim=1)  # 将z和恢复顺序且填充的x拼接在一起赋值给x
 
         aux_dict = {
             "attn": attn,
@@ -190,7 +190,7 @@ class VisionTransformerCE(VisionTransformer):
 
         x, aux_dict = self.forward_features(z, x, ce_template_mask=ce_template_mask, ce_keep_rate=ce_keep_rate,)
 
-        return x, aux_dict
+        return x, aux_dict  # x：模板块的特征和恢复顺序且填充好的搜索块的特征 aux_dict字典：attn存放搜索块和模板块的注意力权重，removed_indexes_s存放指定轮次中删除的index
 
 
 def _create_vision_transformer(pretrained=False, **kwargs):

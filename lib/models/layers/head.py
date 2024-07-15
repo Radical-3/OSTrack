@@ -128,29 +128,29 @@ class CenterPredictor(nn.Module, ):
                 nn.init.xavier_uniform_(p)
 
     def forward(self, x, gt_score_map=None):
-        """ Forward pass with input x. """
+        """ Forward pass with input x. """  # 通过搜索区域的特征计算并返回的中心点的得分，尺寸，偏移
         score_map_ctr, size_map, offset_map = self.get_score_map(x)
 
-        # assert gt_score_map is None
+        # assert gt_score_map is None  gt_score_map：None
         if gt_score_map is None:
             bbox = self.cal_bbox(score_map_ctr, size_map, offset_map)
         else:
             bbox = self.cal_bbox(gt_score_map.unsqueeze(1), size_map, offset_map)
 
-        return score_map_ctr, bbox, size_map, offset_map
+        return score_map_ctr, bbox, size_map, offset_map  # score_map_ctr:中心点得分(32,1,16,16) bbox：每一张图片的最大可能的边界框(32,4) size_map：尺寸(32,2,16,16) offset_map:偏移量(32,2,16,16)_
 
     def cal_bbox(self, score_map_ctr, size_map, offset_map, return_score=False):
-        max_score, idx = torch.max(score_map_ctr.flatten(1), dim=1, keepdim=True)
-        idx_y = idx // self.feat_sz
-        idx_x = idx % self.feat_sz
+        max_score, idx = torch.max(score_map_ctr.flatten(1), dim=1, keepdim=True)  # 找到最大中心点的得分和他的索引 (32,1,16,16) -> (32,256) -> (32,1)
+        idx_y = idx // self.feat_sz  # idx_y是最大索引对应的y的坐标(行) //是整除 156 -> 9
+        idx_x = idx % self.feat_sz  # idx_x是最大索引对应的x的坐标(列) %是取余 156 -> 12
 
-        idx = idx.unsqueeze(1).expand(idx.shape[0], 2, 1)
-        size = size_map.flatten(2).gather(dim=2, index=idx)
-        offset = offset_map.flatten(2).gather(dim=2, index=idx).squeeze(-1)
+        idx = idx.unsqueeze(1).expand(idx.shape[0], 2, 1)  # (32,2,1)
+        size = size_map.flatten(2).gather(dim=2, index=idx)  # 根据最大的中心点的索引取出对应的尺寸和偏移量（32，2，1）
+        offset = offset_map.flatten(2).gather(dim=2, index=idx).squeeze(-1)  # (32,2)
 
         # bbox = torch.cat([idx_x - size[:, 0] / 2, idx_y - size[:, 1] / 2,
         #                   idx_x + size[:, 0] / 2, idx_y + size[:, 1] / 2], dim=1) / self.feat_sz
-        # cx, cy, w, h
+        # cx, cy, w, h  idx_x和idx_y就做为中心点的坐标 对应坐标加上对应方向上的偏移量再除以self.feat_sz进行标准化得到对应的中心点 最后bbox为(32,4)存储的是cx,cy,w,h
         bbox = torch.cat([(idx_x.to(torch.float) + offset[:, :1]) / self.feat_sz,
                           (idx_y.to(torch.float) + offset[:, 1:]) / self.feat_sz,
                           size.squeeze(-1)], dim=1)
@@ -179,7 +179,7 @@ class CenterPredictor(nn.Module, ):
             return y
 
         # ctr branch
-        x_ctr1 = self.conv1_ctr(x)
+        x_ctr1 = self.conv1_ctr(x)  # 这里不懂为什么x的维度是768，而定义的卷积层的输入维度是64？？
         x_ctr2 = self.conv2_ctr(x_ctr1)
         x_ctr3 = self.conv3_ctr(x_ctr2)
         x_ctr4 = self.conv4_ctr(x_ctr3)
@@ -198,7 +198,7 @@ class CenterPredictor(nn.Module, ):
         x_size3 = self.conv3_size(x_size2)
         x_size4 = self.conv4_size(x_size3)
         score_map_size = self.conv5_size(x_size4)
-        return _sigmoid(score_map_ctr), _sigmoid(score_map_size), score_map_offset
+        return _sigmoid(score_map_ctr), _sigmoid(score_map_size), score_map_offset  # 将卷积层得到的中心点的得分(B,1,块数开根号,块数开根号)，尺寸(B,2,块数开根号,块数开根号)映射到0-1之间，和偏移(B,2,块数开根号,块数开根号)一起返回
 
 
 class MLP(nn.Module):

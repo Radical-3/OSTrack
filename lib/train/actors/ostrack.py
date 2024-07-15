@@ -30,12 +30,12 @@ class OSTrackActor(BaseActor):
             status  -  dict containing detailed losses
         """
         # forward pass
-        out_dict = self.forward_pass(data)
+        out_dict = self.forward_pass(data)  # # 这里out_dict存储了7个键值対，pred_boxes(bs,1,4) 预测的bbox score_map(bs,1,16,16)搜索图中每一块是中心点的得分 size_map(bs,2,16,16)搜索图中的每一块的大小 offset_map(bs,2,16,16) 搜索块中每一块的偏移量 backbone_feat(bs,320,768) 经过全部transformer并且已经排列好顺序且填充好的搜索区域和模板区域的特征 (B,总块数,特征维度) attn(搜索块和模板块的注意力权重Q*K^T/C^-2) removed_indexes_s 指定transformer块中删除掉的搜索块的index
 
         # compute losses
         loss, status = self.compute_losses(out_dict, data)
 
-        return loss, status
+        return loss, status # loss:总loss status:各个loss和总loss和iou的字典
 
     def forward_pass(self, data):
         # currently only support 1 template and 1 search region
@@ -74,35 +74,35 @@ class OSTrackActor(BaseActor):
                             ce_keep_rate=ce_keep_rate,
                             return_last_attn=False)
 
-        return out_dict
+        return out_dict  # 这里out_dict存储了7个键值対，pred_boxes(bs,1,4) 预测的bbox score_map(bs,1,16,16)搜索图中每一块是中心点的得分 size_map(bs,2,16,16)搜索图中的每一块的大小 offset_map(bs,2,16,16) 搜索块中每一块的偏移量 backbone_feat(bs,320,768) 经过全部transformer并且已经排列好顺序且填充好的搜索区域和模板区域的特征 (B,总块数,特征维度) attn(搜索块和模板块的注意力权重Q*K^T/C^-2) removed_indexes_s 指定transformer块中删除掉的搜索块的index
 
     def compute_losses(self, pred_dict, gt_dict, return_status=True):
-        # gt gaussian map
+        # gt gaussian map  search_anno是啥？？正确的bbox？
         gt_bbox = gt_dict['search_anno'][-1]  # (Ns, batch, 4) (x1,y1,w,h) -> (batch, 4)
         gt_gaussian_maps = generate_heatmap(gt_dict['search_anno'], self.cfg.DATA.SEARCH.SIZE, self.cfg.MODEL.BACKBONE.STRIDE)
-        gt_gaussian_maps = gt_gaussian_maps[-1].unsqueeze(1)
+        gt_gaussian_maps = gt_gaussian_maps[-1].unsqueeze(1)  # 生成高斯热图，用于位置损失的计算。
 
         # Get boxes
-        pred_boxes = pred_dict['pred_boxes']
+        pred_boxes = pred_dict['pred_boxes']  # 预测框
         if torch.isnan(pred_boxes).any():
             raise ValueError("Network outputs is NAN! Stop Training")
         num_queries = pred_boxes.size(1)
-        pred_boxes_vec = box_cxcywh_to_xyxy(pred_boxes).view(-1, 4)  # (B,N,4) --> (BN,4) (x1,y1,x2,y2)
+        pred_boxes_vec = box_cxcywh_to_xyxy(pred_boxes).view(-1, 4)  # (B,N,4) --> (BN,4) (x1,y1,x2,y2) 将(x,y,w,h)转变为(x1,y1,x2,y2) 左上角和右下角的坐标
         gt_boxes_vec = box_xywh_to_xyxy(gt_bbox)[:, None, :].repeat((1, num_queries, 1)).view(-1, 4).clamp(min=0.0,
                                                                                                            max=1.0)  # (B,4) --> (B,1,4) --> (B,N,4)
-        # compute giou and iou
+        # compute giou and iou  带有vec的都是(x1,y1,x2,y2)
         try:
-            giou_loss, iou = self.objective['giou'](pred_boxes_vec, gt_boxes_vec)  # (BN,4) (BN,4)
+            giou_loss, iou = self.objective['giou'](pred_boxes_vec, gt_boxes_vec)  # (BN,4) (BN,4) 计算iou_loss 和 iou
         except:
             giou_loss, iou = torch.tensor(0.0).cuda(), torch.tensor(0.0).cuda()
         # compute l1 loss
-        l1_loss = self.objective['l1'](pred_boxes_vec, gt_boxes_vec)  # (BN,4) (BN,4)
+        l1_loss = self.objective['l1'](pred_boxes_vec, gt_boxes_vec)  # (BN,4) (BN,4) 计算l1_loss
         # compute location loss
         if 'score_map' in pred_dict:
-            location_loss = self.objective['focal'](pred_dict['score_map'], gt_gaussian_maps)
+            location_loss = self.objective['focal'](pred_dict['score_map'], gt_gaussian_maps)  # 计算focal_loss
         else:
             location_loss = torch.tensor(0.0, device=l1_loss.device)
-        # weighted sum
+        # weighted sum 总Loss是三个loss的加权求和
         loss = self.loss_weight['giou'] * giou_loss + self.loss_weight['l1'] * l1_loss + self.loss_weight['focal'] * location_loss
         if return_status:
             # status for log
@@ -112,6 +112,6 @@ class OSTrackActor(BaseActor):
                       "Loss/l1": l1_loss.item(),
                       "Loss/location": location_loss.item(),
                       "IoU": mean_iou.item()}
-            return loss, status
+            return loss, status  # loss:总loss status:各个loss和总loss和iou的字典
         else:
             return loss

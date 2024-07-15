@@ -86,13 +86,13 @@ class LTRTrainer(BaseTrainer):
             data['epoch'] = self.epoch
             data['settings'] = self.settings
             # forward pass
-            if not self.use_amp:
+            if not self.use_amp:  # loss:总loss status:各个loss和总loss和iou的字典
                 loss, stats = self.actor(data)
             else:
                 with autocast():
                     loss, stats = self.actor(data)
 
-            # backward pass and update weights
+            # backward pass and update weights  梯度清零，反向传播，随机裁减，梯度更新
             if loader.training:
                 self.optimizer.zero_grad()
                 if not self.use_amp:
@@ -108,7 +108,7 @@ class LTRTrainer(BaseTrainer):
                     self.scaler.step(self.optimizer)
                     self.scaler.update()
 
-            # update statistics
+            # update statistics 更新统计量
             batch_size = data['template_images'].shape[loader.stack_dim]
             self._update_stats(stats, batch_size, loader)
 
