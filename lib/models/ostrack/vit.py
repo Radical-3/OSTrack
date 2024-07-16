@@ -128,7 +128,7 @@ class VisionTransformer(BaseBackbone):
         self.num_features = self.embed_dim = embed_dim  # num_features for consistency with other models
         self.num_tokens = 2 if distilled else 1
         norm_layer = norm_layer or partial(nn.LayerNorm, eps=1e-6)
-        act_layer = act_layer or nn.GELU
+        act_layer = act_layer or nn.GELU  # 函数激活层-非线性变换
 
         self.patch_embed = embed_layer(
             img_size=img_size, patch_size=patch_size, in_chans=in_chans, embed_dim=embed_dim)
@@ -139,7 +139,7 @@ class VisionTransformer(BaseBackbone):
         self.pos_embed = nn.Parameter(torch.zeros(1, num_patches + self.num_tokens, embed_dim))
         self.pos_drop = nn.Dropout(p=drop_rate)
 
-        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # stochastic depth decay rule
+        dpr = [x.item() for x in torch.linspace(0, drop_path_rate, depth)]  # 在初始化每个 Transformer 块时，能够为每个块指定一个不同的 DropPath 值。这种方式被称为 “深度衰减”（stochastic depth），通过在每个块中使用不同的 DropPath 值，可以增强模型的正则化效果，从而提高模型的泛化能力。stochastic depth decay rule
         self.blocks = nn.Sequential(*[
             Block(
                 dim=embed_dim, num_heads=num_heads, mlp_ratio=mlp_ratio, qkv_bias=qkv_bias, drop=drop_rate,

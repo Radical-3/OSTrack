@@ -116,12 +116,12 @@ class TrackingSampler(torch.utils.data.Dataset):
             # Select a dataset
             # ？？？
             # 这里会不会有问题，当第一次采样得到的数据如果是无效的话，那么第二次采样的数据不还是self.datasets[0]吗，和第一次的数据一样啊？？？
-            # ？？？
+            # ？？？ 不会，因为这个datasets[0]存的是已经筛选过得样本名称的列表，然后在下面的self.sample_seq_from_dataset中随机选取样本
             # dataset = random.choices(self.datasets, self.p_datasets)[0]
             dataset = self.datasets[0]
             is_video_dataset = dataset.is_video_sequence()
 
-            # sample a sequence from the given dataset
+            # sample a sequence from the given dataset 样本id，样本中每一帧的可见度，样本信息
             seq_id, visible, seq_info_dict = self.sample_seq_from_dataset(dataset, is_video_dataset)
 
             if is_video_dataset:
@@ -137,7 +137,7 @@ class TrackingSampler(torch.utils.data.Dataset):
                         # 首先选择基准帧，范围是[模板帧的数量-1，全部帧-搜索帧数量)
                         # 然后模板帧template_frame_ids如果只有一个那就是基准帧
                         # 如果有n个，那么template_frame_ids[0]是基准帧，其他的n-1个是从[基准帧 - max - gap_increase,基准帧)中选
-                        # 搜索帧search_frame_ids是从[基准帧 + 1,基准帧 + max + gap_increase)中选
+                        # 搜索帧search_frame_ids是从[基准帧 + 1,基准帧 + max + gap_increase)中选 这里有个问题？？？，这样有可能选取的帧的间隙大于两倍的max_gap
                         base_frame_id = self._sample_visible_ids(visible, num_ids=1, min_id=self.num_template_frames - 1,
                                                                  max_id=len(visible) - self.num_search_frames)
                         prev_frame_ids = self._sample_visible_ids(visible, num_ids=self.num_template_frames - 1,
@@ -164,14 +164,14 @@ class TrackingSampler(torch.utils.data.Dataset):
                 # 对于图像数据集，只需重复图像即可生成合成视频
                 template_frame_ids = [1] * self.num_template_frames
                 search_frame_ids = [1] * self.num_search_frames
-            try:
+            try:  # frame_list：所选帧的图片(H,W,3) anno_frames：所选帧的seq_info_dict信息(bbox,valid,visible,visible_ratio) obj_meta：所选帧属于的样本的meta_info信息(文件夹里面的meta_info.ini的信息)
                 template_frames, template_anno, meta_obj_train = dataset.get_frames(seq_id, template_frame_ids, seq_info_dict)
                 search_frames, search_anno, meta_obj_test = dataset.get_frames(seq_id, search_frame_ids, seq_info_dict)
 
-                H, W, _ = template_frames[0].shape
+                H, W, _ = template_frames[0].shape  # 下面两个mask因为anno中没有相应的信息，所以全是0
                 template_masks = template_anno['mask'] if 'mask' in template_anno else [torch.zeros((H, W))] * self.num_template_frames
                 search_masks = search_anno['mask'] if 'mask' in search_anno else [torch.zeros((H, W))] * self.num_search_frames
-
+                # 到这看的data的anno中就只存放bbox的信息了
                 data = TensorDict({'template_images': template_frames,
                                    'template_anno': template_anno['bbox'],
                                    'template_masks': template_masks,

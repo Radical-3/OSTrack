@@ -128,7 +128,7 @@ class STARKProcessing(BaseProcessing):
                 image=crops, bbox=boxes, att=att_mask, mask=mask_crops, joint=False)
 
             # 2021.1.9 Check whether elements in data[s + '_att'] is all 1
-            # 注意力掩码全是1就无效，全是1意味着全部均匀注意，没用 这个att到底是干啥用的？？
+            # 注意力掩码全是1就无效，全是1意味着全部均匀注意，没用 这个att到底是干啥用的？？ att_mask是裁减后填充的地方为True，在进行注意力机制的时候会关注False的地方，而忽略True的地方，因为True的地方的信息没用
             # Note that type of data[s + '_att'] is tuple, type of ele is torch.tensor
             for ele in data[s + '_att']:
                 if (ele == 1).all():

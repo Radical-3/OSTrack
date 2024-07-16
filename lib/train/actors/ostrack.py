@@ -77,7 +77,7 @@ class OSTrackActor(BaseActor):
         return out_dict  # 这里out_dict存储了7个键值対，pred_boxes(bs,1,4) 预测的bbox score_map(bs,1,16,16)搜索图中每一块是中心点的得分 size_map(bs,2,16,16)搜索图中的每一块的大小 offset_map(bs,2,16,16) 搜索块中每一块的偏移量 backbone_feat(bs,320,768) 经过全部transformer并且已经排列好顺序且填充好的搜索区域和模板区域的特征 (B,总块数,特征维度) attn(搜索块和模板块的注意力权重Q*K^T/C^-2) removed_indexes_s 指定transformer块中删除掉的搜索块的index
 
     def compute_losses(self, pred_dict, gt_dict, return_status=True):
-        # gt gaussian map  search_anno是啥？？正确的bbox？
+        # gt gaussian map  search_anno是啥？？正确的bbox？就是正确的bbox
         gt_bbox = gt_dict['search_anno'][-1]  # (Ns, batch, 4) (x1,y1,w,h) -> (batch, 4)
         gt_gaussian_maps = generate_heatmap(gt_dict['search_anno'], self.cfg.DATA.SEARCH.SIZE, self.cfg.MODEL.BACKBONE.STRIDE)
         gt_gaussian_maps = gt_gaussian_maps[-1].unsqueeze(1)  # 生成高斯热图，用于位置损失的计算。

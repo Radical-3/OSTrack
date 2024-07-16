@@ -57,7 +57,7 @@ class Transform:
         # 将inputs的值赋值给out，out也是一个字典，里面存的数据和inputs一样
         out = {k: v for k, v in inputs.items() if k in self._valid_inputs}
 
-        # 这里的t分别対mask, image, bbox做对应的transform，第一个transform是转为灰度图 第二个是裁减
+        # 这里的t分别対mask, image, bbox做对应的transform，第一个transform是转为灰度图 第二个是翻转，但是好像都直接原数据返回的
         for t in self.transforms:
             out = t(**out, joint=joint_mode, new_roll=new_roll)
         if len(var_names) == 1:

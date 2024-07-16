@@ -42,7 +42,7 @@ def candidate_elimination(attn: torch.Tensor, tokens: torch.Tensor, lens_t: int,
         # attn_t = [attn_t[i].mean(dim=1).mean(dim=0) for i in range(len(attn_t))]
         # attn_t = torch.stack(attn_t, dim=0)
     else:
-        attn_t = attn_t.mean(dim=2).mean(dim=1)  # B, H, L-T, L_s --> B, L_s 首先沿着第二维求均值得到(B,H,L_s)表示搜索区域的块対所有模板块的注意力权重 然后沿着第一维求均值得到(H,L_s)表示所有头中，搜索区域的块対所有模板块的注意力权重。也就是说最后整合了每个注意力头中搜索区域的块対模板区域的注意力权重。
+        attn_t = attn_t.mean(dim=2).mean(dim=1)  # B, H, L-T, L_s --> B, L_s 首先沿着第二维求均值得到(B,H,L_s)表示搜索区域的块対所有模板块的注意力权重 然后沿着第一维求均值得到(B,L_s)表示所有头中，搜索区域的块対所有模板块的注意力权重。也就是说最后整合了每个注意力头中搜索区域的块対模板区域的注意力权重。
 
     # use sort instead of topk, due to the speed issue
     # https://github.com/pytorch/pytorch/issues/22812

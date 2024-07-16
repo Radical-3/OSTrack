@@ -83,8 +83,8 @@ class VisionTransformerCE(VisionTransformer):
         self.ce_loc = ce_loc
         for i in range(depth):
             ce_keep_ratio_i = 1.0
-            if ce_loc is not None and i in ce_loc:
-                ce_keep_ratio_i = ce_keep_ratio[ce_index]
+            if ce_loc is not None and i in ce_loc:  # 只在ce_loc指定的块中进行候选消融
+                ce_keep_ratio_i = ce_keep_ratio[ce_index]  # 从ce_keep_ratio中得到候选消融的选取率ce_keep_ratio_i
                 ce_index += 1
 
             blocks.append(
@@ -160,7 +160,7 @@ class VisionTransformerCE(VisionTransformer):
         z = x[:, :lens_z_new]  # 将模板区域和搜索区域的特征分开
         x = x[:, lens_z_new:]
 
-        if removed_indexes_s and removed_indexes_s[0] is not None:  # 感觉有点问题，上面的removed_indexes_s只是存放了指定轮次中删除的index，而你在transformer中是每一轮都删除了index，这里面存的不全，而且如果要恢复光有保留的序列也可以啊
+        if removed_indexes_s and removed_indexes_s[0] is not None:  # 感觉有点问题，上面的removed_indexes_s只是存放了指定轮次中删除的index，而你在transformer中是每一轮都删除了index，这里面存的不全，而且如果要恢复光有保留的序列也可以啊，是全的
             removed_indexes_cat = torch.cat(removed_indexes_s, dim=1)
 
             pruned_lens_x = lens_x - lens_x_new  # 删除的块的长度
