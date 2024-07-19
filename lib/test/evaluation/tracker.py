@@ -167,10 +167,10 @@ class Tracker:
         params.tracker_name = self.name
         params.param_name = self.parameter_name
         # self._init_visdom(visdom_info, debug_)
-
+        # 从params中取multiobj_mode的值，没有就从self.tracker_class中取，再没有就是'default'
         multiobj_mode = getattr(params, 'multiobj_mode', getattr(self.tracker_class, 'multiobj_mode', 'default'))
 
-        if multiobj_mode == 'default':
+        if multiobj_mode == 'default':  # multiobj_mode = 'default'
             tracker = self.create_tracker(params)
 
         elif multiobj_mode == 'parallel':
@@ -183,12 +183,12 @@ class Tracker:
 
         output_boxes = []
 
-        cap = cv.VideoCapture(videofilepath)
+        cap = cv.VideoCapture(videofilepath)  # 创建video对象，路径是你想要打开的视频的路径
         display_name = 'Display: ' + tracker.params.tracker_name
-        cv.namedWindow(display_name, cv.WINDOW_NORMAL | cv.WINDOW_KEEPRATIO)
+        cv.namedWindow(display_name, cv.WINDOW_NORMAL | cv.WINDOW_KEEPRATIO)  #创建一个窗口(名字，属性)这两个属性是可以调整大小，调整大小时保证宽高比
         cv.resizeWindow(display_name, 960, 720)
-        success, frame = cap.read()
-        cv.imshow(display_name, frame)
+        success, frame = cap.read()  # 从视频中读取帧，success表示是否读取成功，frame是读取的帧
+        cv.imshow(display_name, frame)  # 展示读取的帧
 
         def _build_init_info(box):
             return {'init_bbox': box}
@@ -203,7 +203,7 @@ class Tracker:
             output_boxes.append(optional_box)
         else:
             while True:
-                # cv.waitKey()
+                # cv.waitKey() 复制当前帧，以便在上面绘制跟踪结果
                 frame_disp = frame.copy()
 
                 cv.putText(frame_disp, 'Select target ROI and press ENTER', (20, 30), cv.FONT_HERSHEY_COMPLEX_SMALL,
@@ -220,17 +220,17 @@ class Tracker:
 
             if frame is None:
                 break
-
+            # cv.waitKey() 复制当前帧，以便在上面绘制跟踪结果
             frame_disp = frame.copy()
 
             # Draw box
-            out = tracker.track(frame)
-            state = [int(s) for s in out['target_bbox']]
-            output_boxes.append(state)
-
+            out = tracker.track(frame)  # out里面存储了预测框(target_box)的值
+            state = [int(s) for s in out['target_bbox']]  # state是预测框的值
+            output_boxes.append(state)  # 将这个值添加到output_boxes中，这个列表的第一个值是第一帧的值
+            # 在 frame_disp 上绘制一个矩形框，表示跟踪到的目标区域。
             cv.rectangle(frame_disp, (state[0], state[1]), (state[2] + state[0], state[3] + state[1]),
                          (0, 255, 0), 5)
-
+            # 在 frame_disp 上添加提示文本，显示当前状态和操作说明。
             font_color = (0, 0, 0)
             cv.putText(frame_disp, 'Tracking!', (20, 30), cv.FONT_HERSHEY_COMPLEX_SMALL, 1,
                        font_color, 1)
@@ -240,8 +240,8 @@ class Tracker:
                        font_color, 1)
 
             # Display the resulting frame
-            cv.imshow(display_name, frame_disp)
-            key = cv.waitKey(1)
+            cv.imshow(display_name, frame_disp)  # 显示当前帧
+            key = cv.waitKey(1)  # 使用 cv.waitKey(1) 检查是否有键盘输入。 如果是q则停止，r是重新初始化跟踪器，重新跟踪
             if key == ord('q'):
                 break
             elif key == ord('r'):

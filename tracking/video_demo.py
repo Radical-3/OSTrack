@@ -30,7 +30,10 @@ def main():
     parser.add_argument('--save_results', dest='save_results', action='store_true', help='Save bounding boxes')
     parser.set_defaults(save_results=False)
 
-    args = parser.parse_args()
+    # args_list = ['ostrack', 'vitb_256_mae_ce_32x4_ep300', '/home/he/project_code/OSTrack/data/20663902-uhd_3840_2160_60fps.mp4', '--optional_box', '1881.0000', '1054.0000', '122.3435', '289.9994']
+    args_list = ['ostrack', 'vitb_256_mae_ce_32x4_ep300',
+                 '/home/he/project_code/OSTrack/data/3232946-hd_1920_1080_30fps.mp4']
+    args = parser.parse_args(args_list)
 
     run_video(args.tracker_name, args.tracker_param, args.videofile, args.optional_box, args.debug, args.save_results)
 
