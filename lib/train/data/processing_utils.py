@@ -25,45 +25,45 @@ def     sample_target(im, target_bb, search_area_factor, output_sz=None, mask=No
     if not isinstance(target_bb, list):
         x, y, w, h = target_bb.tolist()
     else:
-        x, y, w, h = target_bb
+        x, y, w, h = target_bb  # x,y是左上角的坐标，一般左上角为原点（0,0）
     # Crop image
-    crop_sz = math.ceil(math.sqrt(w * h) * search_area_factor)
+    crop_sz = math.ceil(math.sqrt(w * h) * search_area_factor)  # 首先计算几何平均变长 根号下w*h
 
     if crop_sz < 1:
         raise Exception('Too small bounding box.')
 
-    x1 = round(x + 0.5 * w - crop_sz * 0.5)
+    x1 = round(x + 0.5 * w - crop_sz * 0.5)  # 计算左上角的x1， 原左上角坐标+0.5*w是中心点的x坐标，然后减去几何平均边长*0.5
     x2 = x1 + crop_sz
 
     y1 = round(y + 0.5 * h - crop_sz * 0.5)
     y2 = y1 + crop_sz
 
-    x1_pad = max(0, -x1)
+    x1_pad = max(0, -x1)  # 得到左上角和右下角方向的填充的像素值 都是正值
     x2_pad = max(x2 - im.shape[1] + 1, 0)
 
     y1_pad = max(0, -y1)
     y2_pad = max(y2 - im.shape[0] + 1, 0)
 
-    # Crop target
+    # Crop target  # 在原始图像上裁减图片 因为x1，y1超出范围的话就得减去填充的像素值才能得到在原始图像上裁减的左上角的值 x2，y2是减去
     im_crop = im[y1 + y1_pad:y2 - y2_pad, x1 + x1_pad:x2 - x2_pad, :]
     if mask is not None:
         mask_crop = mask[y1 + y1_pad:y2 - y2_pad, x1 + x1_pad:x2 - x2_pad]
 
-    # Pad
+    # Pad # 然后再将填充的位置填充到裁减后的图像上 im_crop_padded是裁减且填充完的图像
     im_crop_padded = cv.copyMakeBorder(im_crop, y1_pad, y2_pad, x1_pad, x2_pad, cv.BORDER_CONSTANT)
     # deal with attention mask
     H, W, _ = im_crop_padded.shape
-    att_mask = np.ones((H,W))
+    att_mask = np.ones((H,W))  # 首先创建一个和填充后的图像大小一样的全1的矩阵
     end_x, end_y = -x2_pad, -y2_pad
     if y2_pad == 0:
         end_y = None
     if x2_pad == 0:
         end_x = None
-    att_mask[y1_pad:end_y, x1_pad:end_x] = 0
+    att_mask[y1_pad:end_y, x1_pad:end_x] = 0  # 然后设置非填充的区域为0 先y后x和矩阵的表达形式有关，然后end_y是负数比如-5，因为5是y填充的像素值，所以-5表示跳过最后5个像素值
     if mask is not None:
         mask_crop_padded = F.pad(mask_crop, pad=(x1_pad, x2_pad, y1_pad, y2_pad), mode='constant', value=0)
 
-    if output_sz is not None:
+    if output_sz is not None:  # 将注意力掩码和裁减填充后的图像缩放到指定的大小
         resize_factor = output_sz / crop_sz
         im_crop_padded = cv.resize(im_crop_padded, (output_sz, output_sz))
         att_mask = cv.resize(att_mask, (output_sz, output_sz)).astype(np.bool_)

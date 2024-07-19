@@ -97,4 +97,4 @@ def run(settings):
 
     # train process
     # 开始训练
-    trainer.train(cfg.TRAIN.EPOCH, load_latest=True, fail_safe=True)
+    trainer.train(cfg.TRAIN.EPOCH, load_latest=False, fail_safe=True)  # 官方赋值load_latest=True

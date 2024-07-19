@@ -113,21 +113,21 @@ def run_sequence(seq: Sequence, tracker: Tracker, debug=False, num_gpu=8):
     except:
         pass
 
-    def _results_exist():
-        if seq.object_ids is None:
-            if seq.dataset in ['trackingnet', 'got10k']:
-                base_results_path = os.path.join(tracker.results_dir, seq.dataset, seq.name)
+    def _results_exist():  # seq存放了每一个样本的信息，frames：每一个样本的所有帧的路径 ground_truth_rect:bbox 样本名称什么的
+        if seq.object_ids is None:  # seq.object_ids:None
+            if seq.dataset in ['trackingnet', 'got10k']:  # seq.dataset:got10k seq.name：文件的名称
+                base_results_path = os.path.join(tracker.results_dir, seq.dataset, seq.name)  # 保存结果(预测的每一帧的bbox)路径
                 bbox_file = '{}.txt'.format(base_results_path)
             else:
                 bbox_file = '{}/{}.txt'.format(tracker.results_dir, seq.name)
-            return os.path.isfile(bbox_file)
+            return os.path.isfile(bbox_file)  # 如果文件已经存在则返回true
         else:
             bbox_files = ['{}/{}_{}.txt'.format(tracker.results_dir, seq.name, obj_id) for obj_id in seq.object_ids]
             missing = [not os.path.isfile(f) for f in bbox_files]
             return sum(missing) == 0
 
     if _results_exist() and not debug:
-        print('FPS: {}'.format(-1))
+        print('FPS: {}'.format(-1))  # 打印FPS值为-1 这时候结果文件已经存在了并且没有在debug，就返回FPS：-1
         return
 
     print('Tracker: {} {} {} ,  Sequence: {}'.format(tracker.name, tracker.parameter_name, tracker.run_id, seq.name))
@@ -164,22 +164,22 @@ def run_dataset(dataset, trackers, debug=False, threads=0, num_gpus=8):
         debug: Debug level.
         threads: Number of threads to use (default 0).
     """
-    multiprocessing.set_start_method('spawn', force=True)
+    multiprocessing.set_start_method('spawn', force=True)  # 设置多进程启动
 
     print('Evaluating {:4d} trackers on {:5d} sequences'.format(len(trackers), len(dataset)))
     dataset_start_time = time.time()
 
     multiprocessing.set_start_method('spawn', force=True)
 
-    if threads == 0:
+    if threads == 0:  # threads = 0
         mode = 'sequential'
     else:
         mode = 'parallel'
 
-    if mode == 'sequential':
+    if mode == 'sequential':  # mode = 'sequential'
         for seq in dataset:
             for tracker_info in trackers:
-                run_sequence(seq, tracker_info, debug=debug)
+                run_sequence(seq, tracker_info, debug=debug)  # 在tracker_info上运行seq
     elif mode == 'parallel':
         param_list = [(seq, tracker_info, debug, num_gpus) for seq, tracker_info in product(dataset, trackers)]
         with multiprocessing.Pool(processes=threads) as pool:

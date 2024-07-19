@@ -149,7 +149,7 @@ class VisionTransformerCE(VisionTransformer):
         for i, blk in enumerate(self.blocks):  # self.blocks：12个transformer块
             x, global_index_t, global_index_s, removed_index_s, attn = \
                 blk(x, global_index_t, global_index_s, mask_x, ce_template_mask, ce_keep_rate)
-
+            # 这里的attn是原始的搜索区域和模板区域的注意力权重 x是经过transformer块的输出(带有候选消融)(1,k+64,768) global_index_t和global_index_s是模板区域和搜索区域剩下的index removed_index_s是搜索区域删除的index
             if self.ce_loc is not None and i in self.ce_loc:  # self.ce_loc是用来规定要记录哪一次的transformer中通过候选消融删除的搜索区域的块的索引
                 removed_indexes_s.append(removed_index_s)  # 如果self.ce_loc是[3,6,9]，则removed_indexes_s记录了3，6，9块中删除掉的搜索区域的块的索引
 
@@ -159,7 +159,7 @@ class VisionTransformerCE(VisionTransformer):
 
         z = x[:, :lens_z_new]  # 将模板区域和搜索区域的特征分开
         x = x[:, lens_z_new:]
-
+        # 将模板区域的特征恢复顺序并填充
         if removed_indexes_s and removed_indexes_s[0] is not None:  # 感觉有点问题，上面的removed_indexes_s只是存放了指定轮次中删除的index，而你在transformer中是每一轮都删除了index，这里面存的不全，而且如果要恢复光有保留的序列也可以啊，是全的
             removed_indexes_cat = torch.cat(removed_indexes_s, dim=1)
 

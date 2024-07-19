@@ -48,14 +48,14 @@ class OSTrack(nn.Module):
                                     ce_keep_rate=ce_keep_rate,
                                     return_last_attn=return_last_attn, )
 
-        # Forward head x是经过全部transformer并且已经排列好顺序且填充好的搜索区域和模板区域的特征 (B,总块数,特征维度)
-        feat_last = x
+        # Forward head x是经过全部transformer并且已经排列好顺序且填充好的搜索区域和模板区域的特征 (B,总块数,特征维度) aux_dict存了attn：搜索区域和模板区域的注意力权重，removed_inexes_s:搜索区域删除的index
+        feat_last = x  # (1,320,768)
         if isinstance(x, list):
-            feat_last = x[-1]
+            feat_last = x[-1]  # out中存了score_map:每一个搜索区域的小块是否是中心点的得分(bs,1,16,16) pred_bbox:每一张搜索图的最可能的bbox(中心点得分最大的bbox)(bs,1,4) size_map:每一个搜索块的大小(bs,2,16,16) offset_map:每一个搜索块的偏移量(bs,2,16,16)
         out = self.forward_head(feat_last, None)
 
-        out.update(aux_dict)
-        out['backbone_feat'] = x  # 这里out存储了5个键值対，pred_boxes(bs,1,4) 预测的bbox score_map(bs,1,16,16)搜索图中每一块是中心点的得分 size_map(bs,2,16,16)搜索图中的每一块的大小 offset_map(bs,2,16,16) 搜索块中每一块的偏移量 backbone_feat(bs,320,768) 经过全部transformer并且已经排列好顺序且填充好的搜索区域和模板区域的特征 (B,总块数,特征维度)
+        out.update(aux_dict)  # 将aux_dict中的内容添加到out中
+        out['backbone_feat'] = x  # 这里out存储了7个键值対，pred_boxes(bs,1,4) 预测的bbox score_map(bs,1,16,16)搜索图中每一块是中心点的得分 size_map(bs,2,16,16)搜索图中的每一块的大小 offset_map(bs,2,16,16) 搜索块中每一块的偏移量 backbone_feat(bs,320,768) 经过全部transformer并且已经排列好顺序且填充好的搜索区域和模板区域的特征 (B,总块数,特征维度) attn:搜索区域和模板区域经过所有transformer的注意力权重 removed_indexes_s:搜索区域删除掉的index
         return out
 
     def forward_head(self, cat_feature, gt_score_map=None):
@@ -80,7 +80,7 @@ class OSTrack(nn.Module):
         elif self.head_type == "CENTER":
             # run the center head opt_feat：(B,C,总块数开根号，总块数开根号)  gt_score_map：None
             score_map_ctr, bbox, size_map, offset_map = self.box_head(opt_feat, gt_score_map)
-            # outputs_coord = box_xyxy_to_cxcywh(bbox) score_map_ctr:每一个搜索区域的小块是否是中心点的得分(bs,4) bbox:每一张搜索图的最可能的bbox(中心点得分最大的bbox)(bs,1,16,16) size_map:每一个搜索块的大小(ba,2,16,16) offset_map:每一个搜索块的偏移量(bs,2,16,16)
+            # outputs_coord = box_xyxy_to_cxcywh(bbox) score_map_ctr:每一个搜索区域的小块是否是中心点的得分(bs,1,16,16) bbox:每一张搜索图的最可能的bbox(中心点得分最大的bbox)(bs,4) size_map:每一个搜索块的大小(ba,2,16,16) offset_map:每一个搜索块的偏移量(bs,2,16,16)
             outputs_coord = bbox
             outputs_coord_new = outputs_coord.view(bs, Nq, 4)  # outputs_coord_new(bs,1,4)
             out = {'pred_boxes': outputs_coord_new,

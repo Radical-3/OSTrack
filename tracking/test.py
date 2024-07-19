@@ -24,13 +24,13 @@ def run_tracker(tracker_name, tracker_param, run_id=None, dataset_name='otb', se
         threads: Number of threads.
     """
 
-    dataset = get_dataset(dataset_name)
+    dataset = get_dataset(dataset_name)  # dataset存的是Sequence的列表(选取的样本) 每一个Sequence存的是选的样本，里面的信息有name：样本名称 frames：样本中每一帧的路径 ground_truth_rect：变成(1,4)的二维数组的bbox init_data：字典(bbox:bbox的值)
 
     if sequence is not None:
         dataset = [dataset[sequence]]
 
-    trackers = [Tracker(tracker_name, tracker_param, dataset_name, run_id)]
-
+    trackers = [Tracker(tracker_name, tracker_param, dataset_name, run_id)]  # tracker_name:ostrack,tracker_param:vitb_256_mae_ce_32x4_ep300 run_id:None
+    # 上面的trackers包含dataset_name:got10k_test name:ostrack parameter_name:vitb_256_mae_ce_32x4_ep300 results_dir: '/home/he/project_code/OSTrack/output/test/tracking_results/ostrack/vitb_256_mae_ce_32x4_ep300' tracker_class:lib/test/tracker/ostrack里面的OSTrack
     run_dataset(dataset, trackers, debug, threads, num_gpus=num_gpus)
 
 
@@ -45,7 +45,8 @@ def main():
     parser.add_argument('--threads', type=int, default=0, help='Number of threads.')
     parser.add_argument('--num_gpus', type=int, default=8)
 
-    args = parser.parse_args()
+    args_list = ['ostrack', 'vitb_256_mae_ce_32x4_ep300', '--dataset_name', 'got10k_test']
+    args = parser.parse_args(args_list)
 
     try:
         seq_name = int(args.sequence)

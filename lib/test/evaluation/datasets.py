@@ -31,18 +31,18 @@ dataset_dict = dict(
 def load_dataset(name: str):
     """ Import and load a single dataset."""
     name = name.lower()
-    dset_info = dataset_dict.get(name)
+    dset_info = dataset_dict.get(name)  # dset_info:lib.test.evaluation.got10kdataset
     if dset_info is None:
         raise ValueError('Unknown dataset \'%s\'' % name)
 
     m = importlib.import_module(dset_info.module)
-    dataset = getattr(m, dset_info.class_name)(**dset_info.kwargs)  # Call the constructor
-    return dataset.get_sequence_list()
+    dataset = getattr(m, dset_info.class_name)(**dset_info.kwargs)  # dataset: got10kdataset类  # Call the constructor
+    return dataset.get_sequence_list()  # dataset里面存了base_path:test的位置 env_settings:设置，可能是lib/test/local和别的结合 sequence_list:选取的测试集样本名称的列表
 
 
 def get_dataset(*args):
     """ Get a single or set of datasets."""
     dset = SequenceList()
     for name in args:
-        dset.extend(load_dataset(name))
+        dset.extend(load_dataset(name))  # dset存的是Sequence的列表(选取的样本) 每一个Sequence存的是选的样本，里面的信息有name：样本名称 frames：样本中每一帧的路径 ground_truth_rect：变成(1,4)的二维数组的bbox init_data：字典(bbox:bbox的值)
     return dset

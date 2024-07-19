@@ -43,19 +43,19 @@ class Tracker:
         self.run_id = run_id
         self.display_name = display_name
 
-        env = env_settings()
-        if self.run_id is None:
+        env = env_settings()  # 这里的env是lib/test/evaluation下的environment和local的配置信息
+        if self.run_id is None:  # self.results_dir：/home/he/project_code/OSTrack/output/test/tracking_results/ostrack/vitb_256_mae_ce_32x4_ep300
             self.results_dir = '{}/{}/{}'.format(env.results_path, self.name, self.parameter_name)
         else:
             self.results_dir = '{}/{}/{}_{:03d}'.format(env.results_path, self.name, self.parameter_name, self.run_id)
         if result_only:
             self.results_dir = '{}/{}'.format(env.results_path, self.name)
 
-        tracker_module_abspath = os.path.abspath(os.path.join(os.path.dirname(__file__),
+        tracker_module_abspath = os.path.abspath(os.path.join(os.path.dirname(__file__),  # tracker_module_abspath：'/home/he/project_code/OSTrack/lib/test/tracker/ostrack.py'
                                                               '..', 'tracker', '%s.py' % self.name))
         if os.path.isfile(tracker_module_abspath):
-            tracker_module = importlib.import_module('lib.test.tracker.{}'.format(self.name))
-            self.tracker_class = tracker_module.get_tracker_class()
+            tracker_module = importlib.import_module('lib.test.tracker.{}'.format(self.name))  # tracker_module: 引入的lib/test/tracker/ostrack里面的东西 BaseTracker OSTrack cv2 math..
+            self.tracker_class = tracker_module.get_tracker_class()  # self.tracker_class返回tracker_module里的OSTrack
         else:
             self.tracker_class = None
 
@@ -71,18 +71,18 @@ class Tracker:
             debug: Set debug level (None means default value specified in the parameters).
             multiobj_mode: Which mode to use for multiple objects.
         """
-        params = self.get_parameters()
+        params = self.get_parameters()  # params存了搜索和模板区域的大小和相对于bbox的大小和读取的模型权重的路径
 
-        debug_ = debug
+        debug_ = debug  # seq中存了每一个样本中的所有的帧的路径和第一帧的bbox
         if debug is None:
             debug_ = getattr(params, 'debug', 0)
 
         params.debug = debug_
 
-        # Get init information
+        # Get init information  # seq.init_info()字典，键是bbox值是bbox的值 init_info键是init_bbox 值是bbox的值
         init_info = seq.init_info()
 
-        tracker = self.create_tracker(params)
+        tracker = self.create_tracker(params)  # params存放的搜索和模板区域的大小和相对于bbox的倍数和训练好的模型参数的保存路径
 
         output = self._track_sequence(tracker, seq, init_info)
         return output
@@ -110,40 +110,40 @@ class Tracker:
         def _store_outputs(tracker_out: dict, defaults=None):
             defaults = {} if defaults is None else defaults
             for key in output.keys():
-                val = tracker_out.get(key, defaults.get(key, None))
+                val = tracker_out.get(key, defaults.get(key, None))  # 首先从tracker_out找key的值，没有就从defaults中找，再没有就是None
                 if key in tracker_out or val is not None:
-                    output[key].append(val)
+                    output[key].append(val)  # 将bbox的值和time的值添加到output的target_bbox中和time中
 
         # Initialize
-        image = self._read_image(seq.frames[0])
+        image = self._read_image(seq.frames[0])  # 读取第一张图片(1080,1920,3)
 
         start_time = time.time()
-        out = tracker.initialize(image, init_info)
+        out = tracker.initialize(image, init_info)  # 如果self.save_all_boxes为None则返回空值
         if out is None:
             out = {}
 
         prev_output = OrderedDict(out)
-        init_default = {'target_bbox': init_info.get('init_bbox'),
+        init_default = {'target_bbox': init_info.get('init_bbox'),  # 存初始的bbox，和处理时间
                         'time': time.time() - start_time}
         if tracker.params.save_all_boxes:
             init_default['all_boxes'] = out['all_boxes']
             init_default['all_scores'] = out['all_scores']
 
-        _store_outputs(out, init_default)
-
+        _store_outputs(out, init_default)  # 给output的target_bbox和time添加值，这两个分别是一个列表，target_bbox的是第一帧的bbox的值
+        #
         for frame_num, frame_path in enumerate(seq.frames[1:], start=1):
             image = self._read_image(frame_path)
 
             start_time = time.time()
 
-            info = seq.frame_info(frame_num)
+            info = seq.frame_info(frame_num)  # 这个info里面存的是上一帧的bbox，如果是第1帧的话
             info['previous_output'] = prev_output
 
             if len(seq.ground_truth_rect) > 1:
                 info['gt_bbox'] = seq.ground_truth_rect[frame_num]
-            out = tracker.track(image, info)
+            out = tracker.track(image, info) # 这个out好像是预测的搜索图像的bbox在原始图像中的坐标 (xmin,ymin,w,h)
             prev_output = OrderedDict(out)
-            _store_outputs(out, {'time': time.time() - start_time})
+            _store_outputs(out, {'time': time.time() - start_time})  # 给output的target_bbox和time添加值，target_bbox添加的是预测的bbox的值，相对于原图的坐标
 
         for key in ['target_bbox', 'all_boxes', 'all_scores']:
             if key in output and len(output[key]) <= 1:
@@ -275,7 +275,7 @@ class Tracker:
     def get_parameters(self):
         """Get parameters."""
         param_module = importlib.import_module('lib.test.parameter.{}'.format(self.name))
-        params = param_module.parameters(self.parameter_name)
+        params = param_module.parameters(self.parameter_name)  # params存了搜索和模板区域的大小和相对于bbox的大小和读取的模型权重的路径
         return params
 
     def _read_image(self, image_file: str):

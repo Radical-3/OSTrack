@@ -19,7 +19,7 @@ def generate_mask_cond(cfg, bs, device, gt_bbox):
 
     if cfg.MODEL.BACKBONE.CE_TEMPLATE_RANGE == 'ALL':
         box_mask_z = None
-    elif cfg.MODEL.BACKBONE.CE_TEMPLATE_RANGE == 'CTR_POINT':
+    elif cfg.MODEL.BACKBONE.CE_TEMPLATE_RANGE == 'CTR_POINT':  # cfg.MODEL.BACKBONE.CE_TEMPLATE_RANGE = 'CTR_POINT'
         if template_feat_size == 8:
             index = slice(3, 4)  # 就是获取[3,4)也就是3
         elif template_feat_size == 12:
@@ -31,7 +31,7 @@ def generate_mask_cond(cfg, bs, device, gt_bbox):
         else:
             raise NotImplementedError
         box_mask_z = torch.zeros([bs, template_feat_size, template_feat_size], device=device)
-        box_mask_z[:, index, index] = 1  # 创建一个除了中心点(index,index)是1其他位置都是0的tensor
+        box_mask_z[:, index, index] = 1  # 创建一个除了中心点(index,index)是1其他位置都是0的tensor box_mask_z(1,8,8)
         box_mask_z = box_mask_z.flatten(1).to(torch.bool)
     elif cfg.MODEL.BACKBONE.CE_TEMPLATE_RANGE == 'CTR_REC':
         # use fixed 4x4 region, 3:5 for 8x8
@@ -62,7 +62,7 @@ def generate_mask_cond(cfg, bs, device, gt_bbox):
     else:
         raise NotImplementedError
 
-    return box_mask_z
+    return box_mask_z  # (1,64) (bs,图像分成的小块的数量) 除了最中心的块为true，其他的块的值都为false
 
 
 def adjust_keep_rate(epoch, warmup_epochs, total_epochs, ITERS_PER_EPOCH, base_keep_rate=0.5, max_keep_rate=1, iters=-1):
