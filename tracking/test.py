@@ -45,7 +45,8 @@ def main():
     parser.add_argument('--threads', type=int, default=0, help='Number of threads.')
     parser.add_argument('--num_gpus', type=int, default=8)
 
-    args_list = ['ostrack', 'vitb_256_mae_ce_32x4_ep300', '--dataset_name', 'got10k_test']
+    # args_list = ['ostrack', 'vitb_256_mae_ce_32x4_ep300', '--dataset_name', 'got10k_test']
+    args_list = ['ostrack', 'vitb_256_mae_ce_32x4_ep300', '--dataset_name', 'local_data_test']
     args = parser.parse_args(args_list)
 
     try:

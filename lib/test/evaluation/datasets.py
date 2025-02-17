@@ -25,6 +25,8 @@ dataset_dict = dict(
     tnl2k=DatasetInfo(module=pt % "tnl2k", class_name="TNL2kDataset", kwargs=dict()),
     lasot_extension_subset=DatasetInfo(module=pt % "lasotextensionsubset", class_name="LaSOTExtensionSubsetDataset",
                                        kwargs=dict()),
+    local_data_test=DatasetInfo(module=pt % "local_data_", class_name="local_data_Dataset", kwargs=dict(split='test')),
+    fgsm_data_test=DatasetInfo(module=pt % "local_data_", class_name="local_data_Dataset", kwargs=dict(split='test')),
 )
 
 

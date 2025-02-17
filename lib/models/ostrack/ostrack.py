@@ -43,6 +43,7 @@ class OSTrack(nn.Module):
                 ce_keep_rate=None,
                 return_last_attn=False,
                 ):
+
         x, aux_dict = self.backbone(z=template, x=search,
                                     ce_template_mask=ce_template_mask,
                                     ce_keep_rate=ce_keep_rate,

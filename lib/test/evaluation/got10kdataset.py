@@ -35,7 +35,8 @@ class GOT10KDataset(BaseDataset):
         ground_truth_rect = load_text(str(anno_path), delimiter=',', dtype=np.float64)  # ground_truth_rect：读取的ground_truth
 
         frames_path = '{}/{}'.format(self.base_path, sequence_name)  # 样本(文件夹)路径
-        frame_list = [frame for frame in os.listdir(frames_path) if frame.endswith(".jpg")]  # 读取文件夹中的以jpg结尾的文件名称放到frame_list中
+        # frame_list = [frame for frame in os.listdir(frames_path) if frame.endswith(".jpg")]  # 读取文件夹中的以jpg结尾的文件名称放到frame_list中
+        frame_list = [frame for frame in os.listdir(frames_path) if frame.endswith(".jpg")]
         frame_list.sort(key=lambda f: int(f[:-4]))  # 対帧的名称去掉后缀进行排序
         frames_list = [os.path.join(frames_path, frame) for frame in frame_list]  # frames_list是选取样本内的每一帧的路径
 
